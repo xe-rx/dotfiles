@@ -1,0 +1,12 @@
+OK SO U JUST STARTED NVIM, GOOD JOB YIPEEE
+dont forget:
+
+
+<space,leader>ca  -> solutions to lsp that gives warnings etc.
+<space,leader>gf  -> lsp that makes everything prettier wooowww.
+<space,leader>fg  -> live grep.
+<shift, K>        -> parser returns info on functions
+<v-i-w>           -> selects word no matter where you are in it
+
+replace all occurences of word:
+%s/"word"/"replacement"
