@@ -1,4 +1,3 @@
-
 return {
   -- Mason (keep custom registries!)
   {
@@ -9,7 +8,6 @@ return {
         "github:Crashdummyy/mason-registry",
       },
     },
-    -- IMPORTANT: pass opts through; do NOT call setup() with no opts
     config = function(_, opts)
       require("mason").setup(opts)
     end,
@@ -27,42 +25,55 @@ return {
           "html",
           "tailwindcss",
           "ast_grep",
-          "ts_ls", -- typescript
+          "ts_ls",   -- typescript
+          "clangd",  -- you configure it below, so ensure it's installed too
+          "gdscript" -- same
           -- NOTE: do NOT add "roslyn" here; install via :MasonInstall roslyn
         },
       })
     end,
   },
 
-  -- LSP configs (plus Roslyn registration via vim.lsp.config)
+  -- LSP configs (Neovim 0.11+ via vim.lsp.config/vim.lsp.enable)
   {
     "neovim/nvim-lspconfig",
     config = function()
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
-      local lspconfig = require("lspconfig")
 
-      -- your existing servers
-      lspconfig.lua_ls.setup({ capabilities = capabilities })
-      lspconfig.rust_analyzer.setup({ capabilities = capabilities })
-      lspconfig.ts_ls.setup({ capabilities = capabilities })
-      lspconfig.clangd.setup({ capabilities = capabilities })
-      lspconfig.gdscript.setup({ capabilities = capabilities })
-      lspconfig.pyright.setup({
-        capabilities = capabilities,
-        settings = { python = { analysis = { typeCheckingMode = "off" } } },
+      -- Buffer-local keymaps when an LSP attaches
+      vim.api.nvim_create_autocmd("LspAttach", {
+        callback = function(args)
+          local bufnr = args.buf
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr })
+          vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = bufnr })
+        end,
       })
-      lspconfig.html.setup({ capabilities = capabilities })
-      lspconfig.tailwindcss.setup({ capabilities = capabilities })
 
-      -- Keymaps you already had
-      vim.keymap.set("n", "gd", vim.lsp.buf.definition, {})
-      vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, {})
+      -- Regular servers
+      vim.lsp.config("lua_ls", { capabilities = capabilities })
+      vim.lsp.config("rust_analyzer", { capabilities = capabilities })
+      vim.lsp.config("ts_ls", { capabilities = capabilities })
+      vim.lsp.config("clangd", { capabilities = capabilities })
+      vim.lsp.config("gdscript", { capabilities = capabilities })
+      vim.lsp.config("html", { capabilities = capabilities })
+      vim.lsp.config("tailwindcss", { capabilities = capabilities })
+
+      vim.lsp.config("pyright", {
+        capabilities = capabilities,
+        settings = {
+          python = {
+            analysis = {
+              typeCheckingMode = "off",
+            },
+          },
+        },
+      })
 
       ------------------------------------------------------------------
-      -- ROSLYN (C#) — registered via vim.lsp.config, not lspconfig.*
+      -- ROSLYN (C#) — via vim.lsp.config
       ------------------------------------------------------------------
 
-      -- Optional: hard-wire the Mason Roslyn binary to avoid PATH issues
+      -- Optional: hard-wire Mason Roslyn binary to avoid PATH issues
       local mason_roslyn = vim.fn.expand("~/.local/share/nvim/mason/bin/Microsoft.CodeAnalysis.LanguageServer")
       local roslyn_cmd = nil
       if vim.fn.executable(mason_roslyn) == 1 then
@@ -76,15 +87,17 @@ return {
 
       vim.lsp.config("roslyn", {
         capabilities = capabilities,
-        cmd = roslyn_cmd, -- if nil, it falls back to looking up the binary on PATH
-        on_attach = function(client, bufnr)
+        cmd = roslyn_cmd, -- if nil, will fall back to PATH
+        on_attach = function(_, bufnr)
           if vim.lsp.inlay_hint then
             vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
           end
           if vim.lsp.codelens then
             vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
               buffer = bufnr,
-              callback = function() pcall(vim.lsp.codelens.refresh) end,
+              callback = function()
+                pcall(vim.lsp.codelens.refresh)
+              end,
             })
           end
         end,
@@ -114,8 +127,20 @@ return {
           },
         },
       })
-      ------------------------------------------------------------------
+
+      -- Enable everything (Neovim 0.11+)
+      vim.lsp.enable({
+        "lua_ls",
+        "rust_analyzer",
+        "ts_ls",
+        "clangd",
+        "gdscript",
+        "pyright",
+        "html",
+        "tailwindcss",
+        "ast_grep",
+        "roslyn",
+      })
     end,
   },
 }
-
